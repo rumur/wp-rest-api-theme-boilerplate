@@ -45,7 +45,7 @@ $compat_error = function ($message, $subtitle = '', $title = '') {
  */
 if ( ! file_exists( $composer = __DIR__ . '/vendor/autoload.php' ) ) {
 	$compat_error(
-		__( 'You must run <code>composer install</code> from the Vue WP Theme directory.', 'api' ),
+		__( 'You must run <code>composer install</code> from the App WP Theme directory.', 'api' ),
 		__( 'Autoloader not found.', 'api' )
 	);
 }
@@ -60,7 +60,6 @@ $include_file_list = apply_filters( 'app/load_crucial_file_list', [
 	'helpers/loader',   // Theme helpers
 	'hooks/loader',     // Theme actions
 	'setup',            // Theme Setup
-	'routes',           // Theme Routes
 	'admin/loader',     // Loader for Admin stuff
 ] );
 
@@ -80,3 +79,22 @@ try {
 } catch (Throwable $e) {
 	$compat_error($e->getMessage(), 'Something bad happened :(');
 }
+
+add_action( 'after_setup_theme', function() {
+  if ( ! empty( $_POST ) ) {
+
+    $request = \App\app('request');
+
+    $validation = new \App\Services\Validation\Validation( $request, [
+      'username' => 'required|text|min:5',
+      'password' => 'required|min:6|password:special',
+      'test'  => 'bool|required'
+    ]);
+
+    $fields = (object) $validation->validate();
+
+    tp($fields);
+
+    dd($validation->hasFailedFields());
+  }
+}, 11);

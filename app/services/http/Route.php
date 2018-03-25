@@ -2,8 +2,8 @@
 
 namespace App\Services\Http;
 
+use \WP_Http;
 use App\Middleware\Contract\MiddlewareInterface;
-use App\Services\Transmit\APIResponse;
 
 /**
  * Class Route
@@ -11,6 +11,9 @@ use App\Services\Transmit\APIResponse;
  * @author  rumur
  */
 class Route {
+	/** @var string */
+	const ACTION_DELIMITER = '@';
+
 	/**
 	 * Make a route for several methods.
 	 *
@@ -45,15 +48,15 @@ class Route {
 		switch ( $name ) {
 			case 'get':
 			case 'readable':
-				$methods = \WP_REST_Server::READABLE;
+				$methods = Server::READABLE;
 				break;
 			case 'post':
 			case 'creatable':
-				$methods = \WP_REST_Server::CREATABLE;
+				$methods = Server::CREATABLE;
 				break;
 			case 'delete':
 			case 'deletable':
-				$methods = \WP_REST_Server::DELETABLE;
+				$methods = Server::DELETABLE;
 				break;
 			case 'put':
 				$methods = 'PUT'; // @TODO maybe use instead -> \WP_REST_Server::EDITABLE,
@@ -62,7 +65,7 @@ class Route {
 				$methods = 'PATCH'; // @TODO maybe use instead -> \WP_REST_Server::EDITABLE,
 				break;
 			case 'any':
-				$methods = \WP_REST_Server::ALLMETHODS;
+				$methods = Server::ALLMETHODS;
 				break;
 			default:
 				return _doing_it_wrong(
@@ -76,7 +79,7 @@ class Route {
 
 		list( $namespace, $regexp, $args ) = $arguments;
 
-		$args = $self->parseArgs([
+		$args = $self->parseArgs( [
 			'methods' => $methods,
 		], $args );
 
@@ -88,9 +91,9 @@ class Route {
 	/**
 	 * Makes the route available for the REST API
 	 *
-	 * @param        $namespace
-	 * @param string $regexp
-	 * @param array  $args
+	 * @param        $namespace     Route Namespace e.g. `todo\v1`
+	 * @param string $regexp        Regexp
+	 * @param array  $args          Compatible with \WP_REST_Server::register_route
 	 *
 	 * @return boolean
 	 *
@@ -102,7 +105,7 @@ class Route {
 	}
 
 	/**
-	 * Make args eatable for `register_rest_route` function.
+	 * Makes args eatable for `register_rest_route` function.
 	 *
 	 * @param array $args
 	 * @param array $coming_args
@@ -127,7 +130,7 @@ class Route {
 				$this->injectMiddleware( $args );
 			}
 
-			$delimiter = '@';
+			$delimiter = self::ACTION_DELIMITER;
 
 			// We're assuming that the route has a Class@method callback.
 			$has_class_method = strpos( $args['callback'], $delimiter ) !== false;
@@ -168,10 +171,16 @@ class Route {
 
 					return $middleware instanceof MiddlewareInterface
 						? call_user_func_array( [ $middleware, 'handle' ], $args  )
-						: APIResponse::make( 'route_doing_wrong', $error_msg )->setStatus( 404 )->transmit();
+						: Response::make( [
+							'handle'  => 'route_doing_wrong',
+							'status'  => WP_Http::NOT_FOUND,
+							'message' => $error_msg,
+						] )->dispatch();
 				};
 
-				$callback_args = func_get_args();
+				// Gather all arguments together for `permission_callback` function.
+        // Args are passed from @see `wp-includes/rest-api.php:rest_send_allow_header`
+        $callback_args = func_get_args();
 
 				if ( is_array( $middleware ) ) {
 
@@ -184,7 +193,7 @@ class Route {
 					} );
 
 					return empty( $has_errors )
-						? true                               // it's ok we can go further.
+						? true                                // it's ok we can go further.
 						: array_shift( $has_errors ); // if has errors take the first error out.
 				}
 

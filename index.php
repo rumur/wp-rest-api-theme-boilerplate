@@ -10,7 +10,9 @@
 <body>
 
 <div id="content">
-    <div id="app"> <h1><?php _e( 'Loading...' ); ?></h1></div>
+    <div id="app">
+        <h1><?php _e( 'Loading...' ); ?></h1>
+    </div>
 </div>
 
 <?php wp_footer(); ?>

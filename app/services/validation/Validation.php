@@ -2,6 +2,11 @@
 
 namespace App\Services\Validation;
 
+/**
+ * Class Validation
+ * @package App\Services\Validation
+ * @author  rumur
+ */
 class Validation {
 	/** @var ValidationBuilder */
 	protected $builder;
@@ -67,6 +72,8 @@ class Validation {
 	/**
 	 * Stored the `required` fields for further check after validation process.
 	 *
+   * @return $this
+   *
 	 * @author rumur
 	 */
 	protected function setRequiredFields()
@@ -78,6 +85,8 @@ class Validation {
 				$this->requiredFields[ $name ] = __( 'Required field.', 'api' );
 			}
 		}, ARRAY_FILTER_USE_BOTH );
+
+		return $this;
 	}
 
 	/**

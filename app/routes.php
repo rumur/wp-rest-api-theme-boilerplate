@@ -1,7 +1,10 @@
 <?php
 use App\Services\Http\Route;
 
-$namespace = 'todo/v1';
+$slug = 'todo';
+$version = 1;
+
+$namespace = "{$slug}/v{$version}";
 
 /**
  * Router is serving for register
@@ -9,7 +12,7 @@ $namespace = 'todo/v1';
  * @since v1.0.0
  */
 Route::post( $namespace, 'register', [
-	'use' => '\App\Controllers\Auth@register',
+	'use' => '\App\Controllers\AuthController@register',
 ]);
 
 /**
@@ -18,7 +21,7 @@ Route::post( $namespace, 'register', [
  * @since v1.0.0
  */
 Route::post( $namespace, 'login', [
-	'use' => '\App\Controllers\Auth@login',
+	'use' => '\App\Controllers\AuthController@login',
 ]);
 
 /**
@@ -27,16 +30,16 @@ Route::post( $namespace, 'login', [
  * @since v1.0.0
  */
 Route::post( $namespace, 'logout', [
-	'use' => '\App\Controllers\Auth@logout',
-	'middleware' => \App\Middleware\JWT::class, // <- Middleware can swallow an array as well.
+	'use' => '\App\Controllers\AuthController@logout',
+	'middleware' => \App\Middleware\JWTMiddleware::class, // <- Middleware can swallow an array as well.
 ]);
 
 /**
- * Router is serving for getting the user data
+ * Router is serving for getting the user data and refresh a token.
  *
  * @since v1.0.0
  */
 Route::post( $namespace, 'me', [
-	'use' => '\App\Controllers\Auth@me',
-	'middleware' => \App\Middleware\JWT::class,
+	'use' => '\App\Controllers\AuthController@me',
+	'middleware' => \App\Middleware\JWTMiddleware::class,
 ]);

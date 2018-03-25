@@ -2,44 +2,21 @@
 
 namespace App\Services\Http;
 
+use \WP_Http;
 use Firebase\JWT\JWT;
-use WP_REST_Request as Request;
-use App\Services\Transmit\APIError;
 
 /**
- * Class Request
+ * Class RequestJWTTrait
  * @package App\Services\Http
  * @author  rumur
  */
-class RequestAdapter {
-	/** @var Request */
-	protected $request;
+trait RequestJWTTrait {
 	/** @var string */
 	private $token;
-
-	/**
-	 * RequestAdapter constructor.
-	 *
-	 * @param Request $request
-	 */
-	public function __construct( Request $request )
-	{
-		$this->request = $request;
-	}
-
-	/**
-	 * @param Request $request
-	 *
-	 * @return RequestAdapter
-	 *
-	 * @author rumur
-	 */
-	public static function make( Request $request )
-	{
-		$self = new self( $request );
-
-		return $self;
-	}
+	/** @var string */
+	private $secret_key; // defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY : false;
+	/** @var Response  */
+	protected $response;
 
 	/**
 	 * Gets token from the HTTP Headers.
@@ -49,17 +26,25 @@ class RequestAdapter {
 	 */
 	public function getTokenFromRequest()
 	{
-		if ( $auth = $this->request->get_header( 'Authorization' ) ) {
+		if ( $auth = $this->get_header( 'Authorization' ) ) {
 			list( $token ) = sscanf( $auth, 'Bearer %s' );
 
 			return $token
 				? $token
-				: APIError::make( 'api_no_auth_token', __( 'Authorization token is missed.', 'api' ))
-				          ->setStatus( 403 )->transmit();
+				: $this->response->add( [
+						'status'  => WP_Http::FORBIDDEN,
+						'handle'  => 'api_no_auth_token',
+						'data'    => [],
+						'message' => __( 'Authorization token is missed.', 'api' ),
+					] )->dispatch();
 		}
 
-		return APIError::make( 'api_no_auth_header', __( 'Authorization header not found.', 'api' ))
-		               ->setStatus( 403 )->transmit();
+		return $this->response->add( [
+			'status'  => WP_Http::FORBIDDEN,
+			'handle'  => 'api_no_auth_header',
+			'data'    => [],
+			'message' => __( 'Authorization header not found.', 'api' ),
+		] )->dispatch();
 	}
 
 	/**
@@ -87,13 +72,25 @@ class RequestAdapter {
 	}
 
 	/**
+	 * Gets the secret keys.
+	 *
+	 * @return bool|mixed|string
+	 *
+	 * @author rumur
+	 */
+	protected function getSecretKey()
+	{
+		return $this->secret_key;
+	}
+
+	/**
 	 * @return object
 	 *
 	 * @author rumur
 	 */
 	public function getDecodedToken()
 	{
-		$secret_key = defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY : false;
+		$secret_key = $this->getSecretKey();
 
 		$token = JWT::decode( $this->getToken(), $secret_key, [ 'HS256' ] );
 
@@ -107,15 +104,19 @@ class RequestAdapter {
 	 */
 	public function generateTokenData()
 	{
-		$secret_key = defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY : false;
-		$username = $this->request->get_param('username');
-		$password = $this->request->get_param('password');
+		$username = $this->get_param('username');
+		$password = $this->get_param('password');
+
+		$secret_key = $this->getSecretKey();
 
 		/** First thing, check the secret key if not exist return a error*/
 		if ( ! $secret_key ) {
-			$msg = __( 'JWT is not configurated properly, please contact the admin', 'api' );
-
-			return APIError::make( 'jwt_auth_bad_config', $msg )->setStatus( 403 )->transmit();
+			return $this->response->add( [
+				'status'  => WP_Http::FORBIDDEN,
+				'handle'  => 'jwt_auth_bad_config',
+				'data'    => [],
+				'message' => __( 'JWT is not configured properly, please contact the admin.', 'api' ),
+			] )->dispatch();
 		}
 
 		/** Try to authenticate the user with the passed credentials*/
@@ -125,8 +126,12 @@ class RequestAdapter {
 		if ( is_wp_error( $user ) ) {
 			$error_code = $user->get_error_code();
 
-			return APIError::make( '[jwt_auth] ' . $error_code, $user->get_error_message( $error_code ) )
-			               ->setStatus( 403 )->transmit();
+			return $this->response->add( [
+				'status'  => WP_Http::FORBIDDEN,
+				'handle'  => "jwt_auth_{$error_code}",
+				'data'    => [],
+				'message' => $user->get_error_message( $error_code ),
+			] )->dispatch();
 		}
 
 		/** Valid credentials, the user exists create the according Token */
@@ -157,6 +162,8 @@ class RequestAdapter {
 			'nicename' => $user->data->user_nicename,
 		];
 
+		$this->setToken( $token );
+
 		return $data;
 	}
 
@@ -172,17 +179,24 @@ class RequestAdapter {
 		$token = $this->getToken();
 
 		if ( ! $token ) {
-			return APIError::make( 'api_no_auth_token', __( 'Authorization token is missed.', 'api' ) )
-			               ->setStatus( 403 )->transmit();
+			return $this->response->add( [
+				'status'  => WP_Http::FORBIDDEN,
+				'handle'  => "api_no_auth_token",
+				'data'    => [],
+				'message' => __( 'Authorization token is missed.', 'api' ),
+			] )->dispatch();
 		}
 
 		/** Get the Secret Key */
-		$secret_key = defined('JWT_AUTH_SECRET_KEY') ? JWT_AUTH_SECRET_KEY : false;
+		$secret_key = $this->getSecretKey();
 
 		if ( ! $secret_key ) {
-			$msg = __( 'JWT is not configurated properly, please contact the admin', 'api' );
-
-			return APIError::make( 'jwt_auth_bad_config', $msg )->setStatus( 403 )->transmit();
+			return $this->response->add( [
+				'status'  => WP_Http::FORBIDDEN,
+				'handle'  => "jwt_auth_bad_config",
+				'data'    => [],
+				'message' => __( 'JWT is not configured properly, please contact the admin.', 'api' ),
+			] )->dispatch();
 		}
 
 		/** Try to decode the token */
@@ -192,23 +206,35 @@ class RequestAdapter {
 			/** The Token is decoded now validate the iss */
 			if ( $token->iss != get_bloginfo( 'url' ) ) {
 				/** The iss do not match, return error */
-				return APIError::make( 'jwt_auth_bad_iss', __( 'The iss do not match with this server', 'api' ) )
-				               ->setStatus( 403 )->transmit();
+				return $this->response->add( [
+					'status'  => WP_Http::FORBIDDEN,
+					'handle'  => "jwt_auth_bad_iss",
+					'data'    => [],
+					'message' => __( 'The iss do not match with this server', 'api' ),
+				] )->dispatch();
 			}
 
 			/** So far so good, validate the user id in the token */
 			if ( ! isset( $token->data->user->id ) ) {
-				/** No user id in the token, abort!! */
-				return APIError::make( 'jwt_auth_bad_request', __( 'User ID not found in the token', 'api' ) )
-				               ->setStatus( 403 )->transmit();
+				/** No user id in the token, abort! */
+				return $this->response->add( [
+					'status'  => WP_Http::FORBIDDEN,
+					'handle'  => "jwt_auth_bad_request",
+					'data'    => [],
+					'message' => __( 'User ID not found in the token.', 'api' ),
+				] )->dispatch();
 			}
 
 			/** If the output is true return an answer to the request to show it */
 			return true;
 		} catch ( \Exception $e ) {
 			/** Something is wrong trying to decode the token, send back the error */
-			return APIError::make( 'jwt_auth_invalid_token', $e->getMessage() )
-			               ->setStatus( 403 )->transmit();
+			return $this->response->add( [
+				'status'  => WP_Http::FORBIDDEN,
+				'handle'  => "jwt_auth_invalid_token",
+				'data'    => [],
+				'message' => $e->getMessage(),
+			] )->dispatch();
 		}
 	}
 
@@ -222,7 +248,7 @@ class RequestAdapter {
 	 *
 	 * @author rumur
 	 */
-	function __call( $method, $arguments )
+	public function __call( $method, $arguments )
 	{
 		if ( is_callable( [ $this->request, $method ], true ) ) {
 			return call_user_func_array( [ $this->request, $method ], $arguments );
