@@ -32,7 +32,7 @@ abstract class BaseController extends \WP_REST_Controller {
 	 */
 	public function __construct()
 	{
-    $this->request  = \App\app( 'request' );
-    $this->response = \App\app( 'response' );
+        $this->request  = \App\app( 'request' );
+        $this->response = \App\app( 'response' );
 	}
 }

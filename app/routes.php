@@ -31,7 +31,6 @@ Route::post( $namespace, 'login', [
  */
 Route::post( $namespace, 'logout', [
 	'use' => '\App\Controllers\AuthController@logout',
-	'middleware' => \App\Middleware\JWTMiddleware::class, // <- Middleware can swallow an array as well.
 ]);
 
 /**
@@ -41,5 +40,5 @@ Route::post( $namespace, 'logout', [
  */
 Route::post( $namespace, 'me', [
 	'use' => '\App\Controllers\AuthController@me',
-	'middleware' => \App\Middleware\JWTMiddleware::class,
+	'middleware' => \App\Middleware\LoggedInMiddleware::class,
 ]);

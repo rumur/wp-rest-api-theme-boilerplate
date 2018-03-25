@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Middleware\Contract;
+namespace App\Service\Middleware;
 
 use \WP_REST_Request as Request;
 

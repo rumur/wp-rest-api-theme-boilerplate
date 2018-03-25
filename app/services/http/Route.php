@@ -3,7 +3,7 @@
 namespace App\Services\Http;
 
 use \WP_Http;
-use App\Middleware\Contract\MiddlewareInterface;
+use App\Service\Middleware\MiddlewareInterface;
 
 /**
  * Class Route

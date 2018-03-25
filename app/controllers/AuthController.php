@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use \WP_Http;
+use App\Services\Http\Response;
 use App\Services\Controller\BaseController;
 
 
@@ -12,189 +13,199 @@ use App\Services\Controller\BaseController;
  * @author  rumur
  */
 class AuthController extends BaseController {
-	/**
-	 * Rules config for user fields.
-	 * @var array
-	 */
-	protected $form_rules = [
-		'email'    => 'required|email',
-		'password' => 'required|min:5',
-		'username' => 'required|text|min:5',
-	];
+    /**
+     * Rules config for user fields.
+     * @var array
+     */
+    protected $form_rules = [
+        'email'    => 'required|email',
+        'password' => 'required|min:5',
+        'username' => 'required|text|min:5',
+    ];
 
-	/** @inheritdoc */
-	protected function getFormRules($rulesFor = null)
-	{
-		$rules = $this->form_rules;
+    /** @inheritdoc */
+    protected function getFormRules( $rulesFor = null )
+    {
+        $rules = $this->form_rules;
 
-		switch ( $rulesFor ) {
-			case 'login':
-				unset( $rules['email'] );
-				break;
-		}
+        switch ( $rulesFor ) {
+            case 'login':
+                unset( $rules['email'] );
+                break;
+        }
 
-		return $rules;
-	}
+        return $rules;
+    }
 
-	/**
-	 * Login user.
-	 *
-	 * @return mixed
-	 *
-	 * @author rumur
-	 */
-	public function login()
-	{
-		$fields = (object) $this->validate( $this->getFormRules( __METHOD__ ) );
+    /**
+     * Login user.
+     *
+     * @return Response::$driver
+     *
+     * @author rumur
+     */
+    public function login()
+    {
+        $fields = (object) $this->validate( $this->getFormRules( __METHOD__ ) );
 
-		if ( $errors = $this->hasFailedValidation() ) {
-			return $this->response->add( [
-				'status'  => WP_Http::FORBIDDEN,
-				'handle'  => 'api_login_failed',
-				'data'    => $errors,
-				'message' => __( 'User login is failed.', 'api' )
-			] )->dispatch();
-		}
+        if ( $errors = $this->hasFailedValidation() ) {
+            $response_data = [
+                'status'  => WP_Http::FORBIDDEN,
+                'handle'  => 'api_login_failed',
+                'data'    => $errors,
+                'message' => __( 'User login is failed.', 'api' )
+            ];
+        } else {
 
-		$user = wp_authenticate( $fields->username, $fields->password );
+            $user = wp_authenticate( $fields->username, $fields->password );
 
-		if ( is_wp_error( $user ) ) {
-			return $this->response->add( [
-				'status'  => WP_Http::FORBIDDEN,
-				'handle'  => 'api_login_failed',
-				'data'    => $user->get_error_data(),
-				'message' => $user->get_error_messages(),
-			] )->dispatch();
-		}
+            if ( is_wp_error( $user ) ) {
+                $response_data = [
+                    'status'  => WP_Http::FORBIDDEN,
+                    'handle'  => 'api_login_failed',
+                    'data'    => $user->get_error_data(),
+                    'message' => $user->get_error_messages(),
+                ];
+            } else {
+                $response_data = [
+                    'status'  => WP_Http::OK,
+                    'handle'  => 'api_login_success',
+                    'data'    => [
+                        'login'    => $user->get( 'user_login' ),
+                        'email'    => $user->get( 'user_email' ),
+                        'username' => $user->get( 'user_nicename' ),
+                    ],
+                    'message' => __( 'User has been logged in successfully.', 'api' ),
+                ];
+            }
+        }
 
-		$response_data = $this->request->generateTokenData();
+        return $this->response->add( $response_data )->dispatch();
+    }
 
-		return is_wp_error( $response_data )
-			? $response_data
-			: $this->response->add( [
-				'status'  => WP_Http::OK,
-				'handle'  => 'api_login_success',
-				'data'    => $response_data,
-				'message' => __( 'User has been logged in successfully.', 'api' ),
-			] )->dispatch();
-	}
+    /**
+     * Register User.
+     *
+     * @return Response::$driver
+     *
+     * @author rumur
+     */
+    public function register()
+    {
+        $fields = (object) $this->validate( $this->getFormRules( __METHOD__ ) );
 
-	/**
-	 * Register User.
-	 *
-	 * @return \WP_REST_Response
-	 *
-	 * @author rumur
-	 */
-	public function register()
-	{
-		$fields = (object) $this->validate( $this->getFormRules( __METHOD__ ) );
+        $errors = array_fill_keys( [ 'email', 'username', 'password' ], '' );
 
-		$errors = array_fill_keys( [ 'email', 'username', 'password' ], '' );
+        if ( $this->hasFailedValidation() ) {
+            $errors = $this->hasFailedValidation();
 
-		if ( $this->hasFailedValidation() ) {
-			$errors = $this->hasFailedValidation();
+            isset( $errors['username'] )
+                && $errors['username'] = $errors['username'] . " " . __( 'Username should be more or equal 5 characters.', 'api' );
 
-			isset( $errors['username'] )
-				&& $errors['username'] = $errors['username'] . " " . __( 'Username should be more or equal 5 characters.', 'api' );
+            isset( $errors['password'] )
+                && $errors['password'] = $errors['password'] . " " . __( 'Password should be more than 6 symbols.', 'api' );
 
-			isset( $errors['password'] )
-				&& $errors['password'] = $errors['password'] . " " . __( 'Password should be more than 6 symbols.', 'api' );
+            return $this->response->add( [
+                'status'  => WP_Http::FORBIDDEN,
+                'handle'  => 'api_registration_failed',
+                'data'    => $errors,
+                'message' => __( 'Registration is failed.', 'api' ),
+            ] )->dispatch();
+        }
 
-			return $this->response->add( [
-				'status'  => WP_Http::FORBIDDEN,
-				'handle'  => 'api_registration_failed',
-				'data'    => $errors,
-				'message' => __( 'Registration is failed.', 'api' ),
-			] )->dispatch();
-		}
+        email_exists( $fields->email )
+            && $errors['email'] = __( 'Email exists.', 'api' );
 
-		email_exists( $fields->email )
-			&& $errors['email'] = __( 'Email exists.', 'api' );
+        username_exists( $fields->username )
+            && $errors['username'] = __( 'User exists.', 'api' );
 
-		username_exists( $fields->username )
-			&& $errors['username'] = __( 'User exists.', 'api' );
+        $hasErrors = array_filter( $errors );
 
-		$hasErrors = array_filter( $errors );
+        if ( $hasErrors ) {
+            return $this->response->add( [
+                'status'  => WP_Http::UNPROCESSABLE_ENTITY,
+                'handle'  => 'api_registration_invalid',
+                'data'    => $hasErrors,
+                'message' => __( 'Registration is failed.', 'api' ),
+            ] )->dispatch();
+        }
 
-		if ( $hasErrors ) {
-			return $this->response->add( [
-				'status'  => WP_Http::UNPROCESSABLE_ENTITY,
-				'handle'  => 'api_registration_invalid',
-				'data'    => $errors,
-				'message' => __( 'Registration is failed.', 'api' ),
-			] )->dispatch();
-		}
+        $user = wp_create_user( $fields->username, $fields->password, $fields->email );
 
-		$user = wp_create_user( $fields->username, $fields->password, $fields->email );
+        if ( is_wp_error( $user ) ) {
+            $response_data = [
+                'status'  => WP_Http::FORBIDDEN,
+                'handle'  => 'api_registration_invalid',
+                'data'    => $user->get_error_data(),
+                'message' => __( 'Registration is failed.', 'api' ),
+            ];
+        } else {
 
-		if ( ! is_wp_error( $user ) ) {
-			$response_data = $this->request->generateTokenData();
+            $user = get_user_by( 'id', $user );
 
-			// @TODO needs to getting the token here.
-			return $this->response->add( [
-				'status'  => WP_Http::OK,
-				'handle'  => 'api_registration_success',
-				'data'    => $response_data,
-				'message' => __( 'Registration success.', 'api' ),
-			] )->dispatch();
-		} else {
-			return $this->response->add( [
-				'status'  => WP_Http::UNPROCESSABLE_ENTITY,
-				'handle'  => 'api_registration_invalid',
-				'data'    => $user->get_error_message(),
-				'message' => __( 'Registration is failed.', 'api' ),
-			] )->dispatch();
-		}
-	}
+            $response_data = [
+                'status'  => WP_Http::OK,
+                'handle'  => 'api_registration_success',
+                'data'    => [
+                    'login'    => $user->get( 'user_login' ),
+                    'email'    => $user->get( 'user_email' ),
+                    'username' => $user->get( 'user_nicename' ),
+                ],
+                'message' => __( 'Registration success.', 'api' ),
+            ];
+        }
 
-	/**
-	 * Gets info about an authorized user.
-	 *
-	 * @uses WP_Http, RequestJWTAdapter
-	 *
-	 * @return \WP_REST_Response
-	 *
-	 * @author rumur
-	 */
-	public function me()
-	{
-		$is_token_valid = ! is_wp_error( $this->request->getTokenFromRequest() )
-		                  && ! is_wp_error( $this->request->validateToken() );
+        return $this->response->add( $response_data )->dispatch();
+    }
 
-		if ( $is_token_valid ) {
-			$data = $this->request->getDecodedToken();
+    /**
+     * Gets info about an authorized user.
+     *
+     * @uses   WP_Http, RequestJWTAdapter
+     *
+     * @return Response::$driver
+     *
+     * @author rumur
+     */
+    public function me()
+    {
+        if ( is_user_logged_in() && ( $user = wp_get_current_user() ) ) {
+            $response_data = [
+                'status' => WP_Http::OK,
+                'handle' => 'api_user_valid',
+                'data'   => [
+                    'login'    => $user->get( 'user_login' ),
+                    'email'    => $user->get( 'user_email' ),
+                    'username' => $user->get( 'user_nicename' ),
+                ],
+            ];
+        } else {
+            $response_data = [
+                'status'  => WP_Http::FORBIDDEN,
+                'handle'  => 'api_user_invalid',
+                'data'    => [],
+                'message' => __( 'User was not found. Log in once again.', 'api' ),
+            ];
+        }
 
-			if ( isset( $data->user->id ) ) {
-				$user = get_user_by( 'id', absint( $data->user->id ) );
+        return $this->response->add( $response_data )->dispatch();
+    }
 
-				if ( ! is_wp_error( $user ) ) {
-					$response_data = [
-						'token' => $this->request->getToken(),
-						'user_email' => $user->data->user_email,
-						'user_nicename' => $user->data->user_nicename,
-						'user_display_name' => $user->data->display_name,
-					];
+    /**
+     * Logout current user.
+     *
+     * @author rumur
+     */
+    public function logout()
+    {
+        $user = wp_get_current_user();
 
-					return $this->response->add( [
-						'status' => WP_Http::OK,
-						'handle' => 'api_get_token_successful',
-						'data'	 => $response_data,
-					] )->dispatch();
-				}
+        wp_logout();
 
-				return $this->response->add( [
-					'status' => WP_Http::FORBIDDEN,
-					'handle' => 'api_get_token_failed',
-					'data'	 => __( 'User was not found', 'api' ),
-				] )->dispatch();
-			}
-		}
-
-		return $this->response->add( [
-			'status' => WP_Http::FORBIDDEN,
-			'handle' => 'api_get_token_failed',
-			'data'	 => __( 'Invalid Token.', 'api' ),
-		] )->dispatch();
-	}
+        return $this->response->add( [
+            'status'  => WP_Http::OK,
+            'handle'  => 'api_user_logout',
+            'message' => sprintf( __( 'See you soon %s!', 'api' ), $user->get( 'user_nicename' ) ),
+        ] )->dispatch();
+    }
 }

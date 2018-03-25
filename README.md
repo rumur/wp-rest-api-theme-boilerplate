@@ -1,11 +1,12 @@
 # WP Theme for REST API only.
 
-### The Simple JWT ready `WP REST API` theme boilerplate.
-### Includes the primitive `Routing` system.
+### The Simple `WP REST API` theme boilerplate.
+### Includes the primitive `Routing`, `Controller`, `Middleware` systems.
 
 ### Routing sample.
 
 ```
+@ /app/routes.php
 // ...
 Route::post( 'todo/v1', 'me', [
 	'use' => '\App\Controllers\Auth@me',
@@ -26,18 +27,25 @@ Route::any( 'todo/v1', 'events', [
 
 ```
 
-### Includes the primitive `Controller` and  `Validation` systems. 
+### Includes a primitive `Controller` and `Validation` systems. 
 ```
-class Auth extends BaseController {
+@ /app/controllers/AuthController.php
+class AuthController extends BaseController {
     // ...
     
-    public function register( \WP_REST_Request $request )
+    /**
+     * Rules config for user fields.
+     * @var array
+     */
+    protected $form_rules = [
+        'email'    => 'required|email',
+        'password' => 'required|min:5',
+        'username' => 'required|text|min:5',
+    ];
+    
+    public function register()
     {
-        $fields = (object) $this->validate( $request, [
-            'email'    => 'required|email',
-            'username' => 'required|text|min:5',
-            'password' => 'required|password:num,upper,special|min:6',
-        ] );
+        $fields = (object) $this->validate($this->form_rules);
         
         // ...
     }

@@ -146,6 +146,7 @@ class Validation {
 	 */
 	public function hasFailedFields()
 	{
+	  // @TODO add a check for not required fields as well.
 		return array_filter( $this->requiredFields, function ( $_ignore, $name ) {
 			return ! $this->validatedFields[ $name ];
 		}, ARRAY_FILTER_USE_BOTH );

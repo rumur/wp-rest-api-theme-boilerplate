@@ -79,22 +79,3 @@ try {
 } catch (Throwable $e) {
 	$compat_error($e->getMessage(), 'Something bad happened :(');
 }
-
-add_action( 'after_setup_theme', function() {
-  if ( ! empty( $_POST ) ) {
-
-    $request = \App\app('request');
-
-    $validation = new \App\Services\Validation\Validation( $request, [
-      'username' => 'required|text|min:5',
-      'password' => 'required|min:6|password:special',
-      'test'  => 'bool|required'
-    ]);
-
-    $fields = (object) $validation->validate();
-
-    tp($fields);
-
-    dd($validation->hasFailedFields());
-  }
-}, 11);
