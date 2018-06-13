@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Services\Controller;
+namespace App\Api\Services\Controller;
 
-use App\Services\Http\Request;
-use App\Services\Http\Response;
-use App\Services\Form\FormTrait;
-use App\Services\Validation\ValidationTrait;
+use App\Api\Services\Form\FormTrait;
+use App\Api\Services\Http\{Request, Response};
+use App\Api\Services\Validation\ValidationTrait;
 
 /**
  * Class BaseController
@@ -32,7 +31,7 @@ abstract class BaseController extends \WP_REST_Controller {
 	 */
 	public function __construct()
 	{
-        $this->request  = \App\app( 'request' );
-        $this->response = \App\app( 'response' );
+        $this->request  = \App\app( 'app.request' );
+        $this->response = \App\app( 'app.response' );
 	}
 }

@@ -2,34 +2,59 @@
 
 namespace App;
 
-use App\Service\AppContainer;
 use App\Services\Assets;
+use App\Api\Service\Container;
 
 /**
  * Get the app container.
  *
  * @param string $abstract
- *
- * @param AppContainer $container
- * @return \Pimple\Container|mixed
+ * @param array  $parameters
+ * @param Container $container
+ * @return Container|mixed
  */
-function app($abstract = null, AppContainer $container = null)
+function app($abstract = null, $parameters = [], Container $container = null)
 {
-  $container = $container ?: AppContainer::getInstance()->getProvider();
+    $container = $container ?: Container::getInstance();
 
-  if (! $abstract) {
-    return $container;
-  }
+    if (! $abstract) {
+        return $container;
+    }
 
-  return $container->offsetExists($abstract)
-    ? $container->offsetGet($abstract)
-    : null;
+    return $container->bound($abstract)
+        ? $container->makeWith($abstract, $parameters)
+        : $container->makeWith("app.{$abstract}", $parameters);
+}
+
+/**
+ * Get / set the specified configuration value.
+ *
+ * If an array is passed as the key, we will assume you want to set an array of values.
+ *
+ * @param array|string $key
+ * @param mixed $default
+ * @return mixed|\App\Api\Config
+ * @copyright Taylor Otwell
+ * @link https://github.com/laravel/framework/blob/c0970285/src/Illuminate/Foundation/helpers.php#L254-L265
+ */
+function config($key = null, $default = null)
+{
+    if (is_null($key)) {
+        return app('config');
+    }
+    if (is_array($key)) {
+        return app('config')->set($key);
+    }
+
+    return app('config')->get($key, $default);
 }
 
 /**
  * Gets the right file uri from dist folder.
  *
- * @param string $relative_asset_path Path to the dist file `scripts/main.js` | `images/EasyPeasy.png`
+ * @param string $relative_asset_path Path to the dist file
+ *                                    e.g. `scripts/main.js` | `images/EasyPeasy.png`
+ *
  * @return string
  */
 function asset($relative_asset_path)

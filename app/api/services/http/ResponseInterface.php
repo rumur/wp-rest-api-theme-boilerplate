@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services\Http;
+namespace App\Api\Services\Http;
 
 /**
  * Interface ResponseInterface
- * @package App\Services\Http
+ * @package App\Api\Services\Http
  */
 interface ResponseInterface {
 	/**
@@ -16,7 +16,7 @@ interface ResponseInterface {
 	 *
 	 * @author rumur
 	 */
-	public static function make( array $payload );
+	public static function make(array $payload);
 
 	/**
 	 * Prepare data for response.
@@ -37,10 +37,7 @@ interface ResponseInterface {
 	/**
 	 * Shows the User Browser.
 	 *
-	 *
-	 * @see \WP_REST_Server::error_to_response
-	 *
-	 * @return mixed|\WP_Error
+	 * @return mixed|\WP_REST_Response
 	 *
 	 * @author rumur
 	 */

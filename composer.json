@@ -5,7 +5,7 @@
   "homepage": "https://github.com/rumur",
   "authors": [
     {
-      "name": "Ruslan Murarov",
+      "name": "rumur",
       "email": "rumur.dev@gmail.com",
       "homepage": "https://github.com/rumur"
     }
@@ -19,8 +19,12 @@
     }
   },
   "require": {
-    "php": ">=5.6.4",
-    "pimple/pimple": "^3.2"
+    "php": ">=7.1",
+    "illuminate/http": "^5.6",
+    "illuminate/config": "^5.6",
+    "illuminate/container": "^5.6",
+    "illuminate/validation": "^5.6",
+    "illuminate/database": "^5.6"
   },
   "require-dev": {
     "squizlabs/php_codesniffer": "^2.8.0"

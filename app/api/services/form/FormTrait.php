@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Form;
+namespace App\Api\Services\Form;
 
 /**
  * Trait FormTrait

@@ -1,8 +1,11 @@
 <?php
 
-function dd( $args ) {
-	var_dump( $args );
-	exit;
+if (!function_exists('dd')) {
+    function dd($args)
+    {
+        var_dump(...$args);
+        exit;
+    }
 }
 
 function td( $args ) {

@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Middleware;
+namespace App\Api\Middleware;
 
-use \WP_REST_Request as Request;
-use App\Service\Middleware\Middleware;
+use App\Api\Services\Http\Request;
+use App\Api\Service\Middleware\Middleware;
 
 /**
- * Class JWTMiddleware
- * @package App\Middleware
+ * Class LoggedInMiddleware
+ * @package App\Api\Middleware
  * @author  rumur
  */
 class LoggedInMiddleware extends Middleware {
     /**
      * Checks if a given request has access.
      *
-     * @param  \WP_REST_Request  $request Full details about the request.
+     * @param  Request  $request Full details about the request.
      *
      * @return bool    True if the request has access.
      */

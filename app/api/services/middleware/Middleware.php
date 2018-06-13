@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Service\Middleware;
+namespace App\Api\Service\Middleware;
 
-use App\Services\Http\Request;
+use App\Api\Services\Http\Request;
 
 /**
  * Class Middleware
- * @package App\Middleware
+ * @package App\Api\Middleware
  * @author  rumur
  */
 abstract class Middleware implements MiddlewareInterface {
@@ -28,6 +28,6 @@ abstract class Middleware implements MiddlewareInterface {
      */
     public function boot()
     {
-        $this->request = \App\app( 'request' );
+        $this->request = \App\app( 'app.request' );
     }
 }

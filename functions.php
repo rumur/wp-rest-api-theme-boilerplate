@@ -7,7 +7,11 @@
  * @package api
  */
 
+use App\Api\Config;
+use App\Api\Service\Container;
+
 defined('DS') || define('DS', DIRECTORY_SEPARATOR);
+define('TEXT_DOMAIN', 'api');
 
 /**
  * Loads all
@@ -35,23 +39,36 @@ function dir_loader( $dir, $exclude_file = null ) {
  * @param string $title
  */
 $compat_error = function ($message, $subtitle = '', $title = '') {
-	$title = $title ?: __('Theme &rsaquo; Error', 'api');
+	$title = $title ?: __('Theme &rsaquo; Error', TEXT_DOMAIN);
 	$message = "<h1>{$title}<br><small>{$subtitle}</small></h1><p>{$message}</p>";
 	wp_die($message, $title);
 };
+
+/**
+ * Ensure compatible version of PHP is used
+ */
+if (version_compare('7.1', phpversion(), '>=')) {
+    $compat_error(__('You must be using PHP 7 or greater.', TEXT_DOMAIN), __('Invalid PHP version', TEXT_DOMAIN));
+}
+
+/**
+ * Ensure compatible version of WordPress is used
+ */
+if (version_compare('4.7.0', get_bloginfo('version'), '>=')) {
+    $compat_error(__('You must be using WordPress 4.7.0 or greater.', TEXT_DOMAIN), __('Invalid WordPress version', TEXT_DOMAIN));
+}
 
 /**
  * Api required composer files.
  */
 if ( ! file_exists( $composer = __DIR__ . '/vendor/autoload.php' ) ) {
 	$compat_error(
-		__( 'You must run <code>composer install</code> from the App WP Theme directory.', 'api' ),
-		__( 'Autoloader not found.', 'api' )
+		__( 'You must run <code>composer install</code> from the App WP Theme directory.', TEXT_DOMAIN ),
+		__( 'Autoloader not found.', TEXT_DOMAIN )
 	);
 }
 
 require_once $composer;
-
 
 /**
  * The crucial file's list that need to be loaded.
@@ -73,9 +90,20 @@ try {
 	array_map(function ($file) use ($compat_error) {
 	    $file = "./app/{$file}.php";
 	    if (! locate_template($file, true, true)) {
-	        $compat_error(sprintf(__('Error locating <code>%s</code> for inclusion.', 'api'), $file), 'File not found');
+	        $compat_error(sprintf(__('Error locating <code>%s</code> for inclusion.', TEXT_DOMAIN), $file), 'File not found');
 	    }
 	}, $include_file_list );
 } catch (Throwable $e) {
 	$compat_error($e->getMessage(), 'Something bad happened :(');
 }
+
+/**
+ * Adds Configs to the App.
+ */
+Container::getInstance()
+    ->bindIf('config', function () {
+        return new Config([
+            'theme' => require dirname(__FILE__) . '/config/theme.php',
+            'rest' => require dirname(__FILE__) . '/config/rest.php',
+        ]);
+    }, true);
